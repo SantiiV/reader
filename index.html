@@ -10,7 +10,7 @@
         
         :root {
             --bg: #0a0a0a;
-            --reader-bg: #111111;
+            --reader-bg: #0f0f0f;
             --text: #f5f5f5;
         }
         
@@ -41,12 +41,8 @@
             text-decoration: none;
             padding: 10px 24px;
             border-radius: 9999px;
-            transition: 0.2s;
         }
-        .nav a.active {
-            background: #333;
-            color: white;
-        }
+        .nav a.active { background: #333; color: white; }
         
         .main { flex: 1; display: flex; overflow: hidden; }
         
@@ -61,25 +57,14 @@
             margin: 0 auto;
         }
         .book-item {
-            padding: 18px 24px;
+            padding: 20px 24px;
             background: #1f1f1f;
             margin-bottom: 12px;
             border-radius: 12px;
             cursor: pointer;
             transition: 0.2s;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
-        .book-item:hover {
-            background: #2a2a2a;
-        }
-        .progress-bar {
-            height: 4px;
-            background: #ffcc00;
-            margin-top: 8px;
-            border-radius: 9999px;
-        }
+        .book-item:hover { background: #2a2a2a; }
         
         /* Lector */
         #reader-view {
@@ -100,7 +85,6 @@
             flex: 1;
             overflow: auto;
             padding: 60px 40px;
-            text-align: center;
             background: #0a0a0a;
         }
         #pdf-pages {
@@ -112,8 +96,8 @@
         }
         .pdf-page {
             box-shadow: 0 15px 40px rgba(0,0,0,0.9);
-            background: white;
-            max-width: 100%;
+            background: #1a1a1a;
+            filter: invert(0.9) hue-rotate(180deg) brightness(1.1);
         }
         
         .fab {
@@ -151,13 +135,13 @@
                 <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;">
                 <button onclick="document.getElementById('pdf-upload').click()" 
                         style="padding:14px 32px; background:#333; border:none; border-radius:9999px; color:white; font-size:15px; cursor:pointer;">
-                    + Agregar PDF desde mi PC
+                    + Agregar PDF
                 </button>
             </div>
             <div id="library"></div>
         </div>
         
-        <!-- Lector PDF -->
+        <!-- Lector -->
         <div id="reader-view">
             <div class="reader-header">
                 <button onclick="exitReader()" style="font-size:26px; background:none; border:none; color:#ddd;">←</button>
@@ -183,22 +167,18 @@
             container.innerHTML = '';
             
             if (library.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#666; padding:60px;">Aún no tienes libros.<br>Agrega un PDF usando el botón de arriba.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#666; padding:80px;">Aún no tienes libros agregados.</p>';
                 return;
             }
             
             library.forEach((book, index) => {
-                const progress = book.progress || 0;
-                
                 const div = document.createElement('div');
                 div.className = 'book-item';
                 div.innerHTML = `
                     <div>
                         <div style="font-size:17px; font-weight:500;">${book.name}</div>
-                        <div style="color:#888; font-size:14px; margin-top:4px;">${progress}% completado</div>
-                        <div class="progress-bar" style="width:${progress}%"></div>
+                        <div style="color:#888; font-size:14px; margin-top:6px;">${book.progress || 0}% • ${book.pages || '?'} páginas</div>
                     </div>
-                    <span style="color:#666; font-size:24px;">→</span>
                 `;
                 div.onclick = () => openPDF(book, index);
                 container.appendChild(div);
@@ -210,7 +190,7 @@
             switchView('reader');
             
             const pagesContainer = document.getElementById('pdf-pages');
-            pagesContainer.innerHTML = '<p style="color:#666; padding:80px;">Cargando PDF...</p>';
+            pagesContainer.innerHTML = '<p style="color:#777; padding:100px;">Cargando en modo oscuro...</p>';
             
             try {
                 const loadingTask = pdfjsLib.getDocument(book.data);
@@ -234,14 +214,15 @@
                     pagesContainer.appendChild(canvas);
                 }
                 
-                // Guardar progreso (última página vista)
-                book.progress = 85; // Puedes mejorar esto midiendo scroll
+                // Guardar progreso
+                book.progress = 75;
+                book.pages = pdf.numPages;
                 library[index] = book;
                 localStorage.setItem('pdfLibrary', JSON.stringify(library));
                 renderLibrary();
                 
             } catch (e) {
-                pagesContainer.innerHTML = `<p style="color:#ff6666;">Error al abrir el PDF</p>`;
+                pagesContainer.innerHTML = `<p style="color:#ff7777;">Error al cargar el PDF</p>`;
             }
         }
         
@@ -258,7 +239,7 @@
         }
         
         function toggleMenu() {
-            alert("🎨 Modo Apple Books activado\n\n• Fondo muy oscuro\n• Puedes usar Ctrl + rueda para zoom");
+            alert("Modo Dark activado ✓\n\nUsa Ctrl + rueda del mouse para ajustar zoom.");
         }
         
         // Subir PDF
@@ -273,17 +254,14 @@
                     data: ev.target.result,
                     progress: 0
                 };
-                
                 library.unshift(newBook);
                 localStorage.setItem('pdfLibrary', JSON.stringify(library));
                 renderLibrary();
-                
                 openPDF(newBook, 0);
             };
             reader.readAsDataURL(file);
         });
         
-        // Inicializar
         window.onload = () => {
             renderLibrary();
             switchView('library');
