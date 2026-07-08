@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Libros • Apple Books</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Georgia&display=swap');
         
-        :root {
-            --bg: #0f0f0f;
-            --text: #f0f0f0;
-        }
+        :root { --bg: #0f0f0f; --text: #f0f0f0; }
         
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
             font-family: 'Georgia', serif;
             background: var(--bg);
@@ -32,219 +29,86 @@
             justify-content: space-between;
             border-bottom: 1px solid #333;
         }
-        
-        .logo {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.8px;
-        }
-        
-        .nav {
-            display: flex;
-            gap: 28px;
-            font-size: 15px;
-        }
+        .logo { font-size: 24px; font-weight: 700; }
         
         .nav a {
             color: #aaa;
             text-decoration: none;
             padding: 8px 20px;
             border-radius: 9999px;
-            transition: 0.2s;
         }
+        .nav a.active { background: #333; color: white; }
         
-        .nav a.active {
-            background: #333;
-            color: white;
-        }
+        .main { flex: 1; display: flex; overflow: hidden; }
         
-        .main {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-        
-        /* LIBRARY */
+        /* Biblioteca */
         #library-view {
             flex: 1;
-            padding: 40px 32px;
+            padding: 40px;
             overflow-y: auto;
         }
-        
         #library {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 32px;
-            max-width: 1200px;
-            margin: 0 auto;
         }
-        
         .book-card {
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
         }
-        
-        .book-card:hover {
-            transform: translateY(-12px) scale(1.04);
-        }
-        
+        .book-card:hover { transform: translateY(-10px); }
         .book-cover {
             width: 100%;
-            aspect-ratio: 5 / 7.2;
+            aspect-ratio: 5/7;
+            background: #222;
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 70%);
-            background: #222;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
         }
+        .book-cover img { width:100%; height:100%; object-fit:cover; }
         
-        .book-cover img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        
-        .book-info {
-            margin-top: 14px;
-            text-align: center;
-        }
-        
-        .book-title {
-            font-size: 15.5px;
-            font-weight: 600;
-            line-height: 1.3;
-        }
-        
-        .book-author {
-            font-size: 13px;
-            color: #888;
-            margin-top: 4px;
-        }
-        
-        /* READER */
+        /* Lector PDF */
         #reader-view {
             flex: 1;
             display: none;
             flex-direction: column;
             background: #0a0a0a;
         }
-        
-        #reader {
-            position: relative;
+        #pdf-container {
             flex: 1;
+            overflow: auto;
+            padding: 40px;
+            text-align: center;
+            background: #111;
+        }
+        #pdf-pages {
             display: flex;
             flex-direction: column;
-        }
-        
-        .reader-header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 16px 32px;
-            background: rgba(15,15,15,0.97);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 200;
-            opacity: 0;
-            transition: opacity 0.4s;
-        }
-        
-        .reader-content {
-            flex: 1;
-            padding: 100px 80px 80px;
-            overflow-y: auto;
-            line-height: 1.82;
-            font-size: 18.5px;
-            max-width: 720px;
+            gap: 30px;
+            max-width: 900px;
             margin: 0 auto;
-            text-align: justify;
-            background: #111111;
         }
-        
-        .reader-content h1 {
-            font-family: 'Playfair Display', serif;
-            text-align: center;
-            margin-bottom: 60px;
-            font-size: 34px;
-            color: #e0e0e0;
-        }
-        
-        .reader-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 18px 32px;
-            background: rgba(15,15,15,0.97);
-            display: flex;
-            align-items: center;
-            font-size: 13.5px;
-            color: #777;
-            z-index: 200;
-        }
-        
-        .progress {
-            flex: 1;
-            height: 3px;
-            background: #333;
-            margin: 0 24px;
-            border-radius: 9999px;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            width: 42%;
-            background: #ffcc00;
-            border-radius: 9999px;
+        .pdf-page {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            background: white;
         }
         
         .fab {
-            position: absolute;
-            bottom: 32px;
-            right: 32px;
-            width: 60px;
-            height: 60px;
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            width: 64px;
+            height: 64px;
             background: #222;
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
+            font-size: 28px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             cursor: pointer;
-            z-index: 300;
-            transition: 0.2s;
-        }
-        
-        .fab:hover { background: #333; transform: scale(1.1); }
-        
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.92);
             z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal-content {
-            background: #1f1f1f;
-            padding: 32px;
-            border-radius: 18px;
-            width: 380px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-        }
-        
-        button {
-            background: none;
-            border: none;
-            color: inherit;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -255,152 +119,137 @@
             <a href="#" onclick="switchView('library')" class="active" id="lib-tab">Biblioteca</a>
             <a href="#" onclick="switchView('reader')" id="read-tab">Leyendo</a>
         </div>
-        <div style="color:#666;font-size:14px;">Reader para PC</div>
     </header>
     
     <div class="main">
         <!-- Biblioteca -->
         <div id="library-view">
+            <div style="text-align:center; margin-bottom:30px;">
+                <input type="file" id="pdf-upload" accept="application/pdf" style="display:none;">
+                <button onclick="document.getElementById('pdf-upload').click()" 
+                        style="padding:12px 28px; background:#333; border:none; border-radius:9999px; color:white; cursor:pointer;">
+                    + Agregar PDF
+                </button>
+            </div>
             <div id="library"></div>
         </div>
         
         <!-- Lector -->
         <div id="reader-view">
-            <div id="reader">
-                <div class="reader-header" id="reader-header">
-                    <button onclick="exitReader()" style="font-size:22px;">←</button>
-                    <div style="font-weight:600;" id="book-title-header"></div>
-                    <button onclick="toggleMenu()" style="font-size:22px;">Aa</button>
-                </div>
-                
-                <div class="reader-content" id="reader-content">
-                    <!-- Contenido dinámico -->
-                </div>
-                
-                <div class="reader-footer">
-                    <span id="book-author-footer"></span>
-                    <div class="progress"><div class="progress-bar"></div></div>
-                    <span>Pág. <span id="current-page">39</span> / 140</span>
-                </div>
-                
-                <div class="fab" onclick="toggleMenu()">Aa</div>
+            <div style="padding:15px 30px; background:#1a1a1a; display:flex; justify-content:space-between; align-items:center;">
+                <button onclick="exitReader()" style="font-size:24px;">←</button>
+                <div id="current-book-title" style="font-weight:600;"></div>
+                <button onclick="toggleMenu()" style="font-size:24px;">Aa</button>
+            </div>
+            
+            <div id="pdf-container">
+                <div id="pdf-pages"></div>
             </div>
         </div>
     </div>
     
-    <!-- Modal Ajustes -->
-    <div class="modal" id="settings-modal">
-        <div class="modal-content">
-            <h3 style="text-align:center;margin-bottom:24px;">Apariencia del libro</h3>
-            
-            <div style="margin-bottom:20px;">
-                <strong>Tamaño de letra</strong>
-                <div style="display:flex;gap:12px;margin-top:10px;">
-                    <button onclick="changeFontSize(-2)" style="flex:1;padding:14px;background:#333;border-radius:8px;">A−</button>
-                    <button onclick="changeFontSize(2)" style="flex:1;padding:14px;background:#333;border-radius:8px;">A+</button>
-                </div>
-            </div>
-            
-            <button onclick="closeMenu()" style="width:100%;padding:16px;background:#333;border-radius:12px;margin-top:12px;">
-                Cerrar
-            </button>
-        </div>
-    </div>
+    <div class="fab" onclick="document.getElementById('pdf-upload').click()">+</div>
     
     <script>
-        let currentFontSize = 18.5;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         
-        const books = [
-            {
-                id: 1,
-                title: "Animal Farm",
-                author: "George Orwell",
-                cover: "https://picsum.photos/id/1015/800/1100", // Reemplaza con tu imagen real si quieres
-                content: `<h1>Animal Farm</h1>
-                <p>still unfed. At last they could stand it no longer. One of the cows broke in the door of the store-shed with her horn and all the animals began to help themselves from the bins. It was just then that Mr. Jones woke up. The next moment he and his four men were in the store-shed with whips in their hands, lashing out in all directions...</p>`
-            },
-            {
-                id: 2,
-                title: "1984",
-                author: "George Orwell",
-                cover: "https://picsum.photos/id/201/800/1100",
-                content: `<h1>1984</h1>
-                <p>It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions...</p>`
-            }
-        ];
+        let library = JSON.parse(localStorage.getItem('pdfLibrary')) || [];
         
         function renderLibrary() {
             const container = document.getElementById('library');
             container.innerHTML = '';
             
-            books.forEach(book => {
-                const cardHTML = `
-                    <div class="book-card" onclick="openBook(${book.id})">
-                        <div class="book-cover">
-                            <img src="${book.cover}" alt="${book.title}">
-                        </div>
-                        <div class="book-info">
-                            <div class="book-title">${book.title}</div>
-                            <div class="book-author">${book.author}</div>
-                        </div>
+            library.forEach((book, index) => {
+                const div = document.createElement('div');
+                div.className = 'book-card';
+                div.innerHTML = `
+                    <div class="book-cover">
+                        <img src="${book.cover || 'https://picsum.photos/id/201/400/520'}" alt="${book.name}">
+                    </div>
+                    <div style="text-align:center; margin-top:12px;">
+                        <div style="font-weight:600;">${book.name}</div>
                     </div>
                 `;
-                container.innerHTML += cardHTML;
+                div.onclick = () => openPDF(book, index);
+                container.appendChild(div);
             });
         }
         
-        function openBook(id) {
-            const book = books.find(b => b.id === id);
-            if (!book) return;
-            
-            document.getElementById('book-title-header').textContent = book.title;
-            document.getElementById('book-author-footer').textContent = book.author;
-            document.getElementById('reader-content').innerHTML = book.content;
-            
+        async function openPDF(book, index) {
+            document.getElementById('current-book-title').textContent = book.name;
             switchView('reader');
             
-            setTimeout(() => {
-                document.getElementById('reader-header').style.opacity = '1';
-            }, 300);
+            const pagesContainer = document.getElementById('pdf-pages');
+            pagesContainer.innerHTML = '<p style="color:#888; padding:40px;">Cargando PDF...</p>';
+            
+            try {
+                const loadingTask = pdfjsLib.getDocument(book.data);
+                const pdf = await loadingTask.promise;
+                
+                pagesContainer.innerHTML = '';
+                
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const scale = 1.8;
+                    const viewport = page.getViewport({ scale });
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'pdf-page';
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    await page.render({
+                        canvasContext: canvas.getContext('2d'),
+                        viewport: viewport
+                    }).promise;
+                    
+                    pagesContainer.appendChild(canvas);
+                }
+            } catch (e) {
+                pagesContainer.innerHTML = `<p style="color:red;">Error al cargar el PDF: ${e.message}</p>`;
+            }
+        }
+        
+        function switchView(view) {
+            document.getElementById('library-view').style.display = view === 'library' ? 'block' : 'none';
+            document.getElementById('reader-view').style.display = view === 'reader' ? 'flex' : 'none';
         }
         
         function exitReader() {
             switchView('library');
         }
         
-        function switchView(view) {
-            document.getElementById('library-view').style.display = view === 'library' ? 'block' : 'none';
-            document.getElementById('reader-view').style.display = view === 'reader' ? 'flex' : 'none';
-            
-            document.getElementById('lib-tab').classList.toggle('active', view === 'library');
-            document.getElementById('read-tab').classList.toggle('active', view === 'reader');
-        }
-        
         function toggleMenu() {
-            document.getElementById('settings-modal').style.display = 'flex';
+            alert("Ajustes de apariencia (próximamente)\n\nPuedes usar Ctrl + rueda del mouse para hacer zoom en las páginas.");
         }
         
-        function closeMenu() {
-            document.getElementById('settings-modal').style.display = 'none';
-        }
-        
-        function changeFontSize(delta) {
-            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
-            const content = document.getElementById('reader-content');
-            if (content) content.style.fontSize = `${currentFontSize}px`;
-        }
+        // Cargar PDF
+        document.getElementById('pdf-upload').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const newBook = {
+                    name: file.name,
+                    data: ev.target.result,
+                    cover: 'https://picsum.photos/id/201/400/520'
+                };
+                
+                library.unshift(newBook);
+                localStorage.setItem('pdfLibrary', JSON.stringify(library));
+                renderLibrary();
+                
+                // Abrir automáticamente
+                openPDF(newBook, 0);
+            };
+            reader.readAsDataURL(file);
+        });
         
         // Inicializar
         window.onload = () => {
             renderLibrary();
             switchView('library');
-            
-            // Teclado
-            document.addEventListener('keydown', e => {
-                if (document.getElementById('reader-view').style.display === 'flex') {
-                    if (e.key === "Escape") exitReader();
-                }
-            });
         };
     </script>
 </body>
