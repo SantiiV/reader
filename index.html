@@ -3,21 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Libros • Apple Books Style</title>
+    <title>Libros • Apple Books</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Georgia&display=swap');
         
         :root {
-            --bg: #121212;
-            --text: #f5f5f5;
-            --accent: #ffcc00;
+            --bg: #0f0f0f;
+            --text: #f0f0f0;
         }
         
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Georgia', serif;
@@ -30,34 +25,32 @@
         }
         
         header {
-            background: #1e1e1e;
-            padding: 12px 24px;
+            background: #1a1a1a;
+            padding: 14px 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid #333;
-            z-index: 100;
         }
         
         .logo {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700;
-            letter-spacing: -0.5px;
-            color: white;
+            letter-spacing: -0.8px;
         }
         
         .nav {
             display: flex;
-            gap: 32px;
+            gap: 28px;
             font-size: 15px;
         }
         
         .nav a {
             color: #aaa;
             text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.2s;
+            padding: 8px 20px;
+            border-radius: 9999px;
+            transition: 0.2s;
         }
         
         .nav a.active {
@@ -71,62 +64,76 @@
             overflow: hidden;
         }
         
-        /* LIBRARY VIEW */
-        #library {
+        /* LIBRARY */
+        #library-view {
             flex: 1;
-            padding: 32px;
+            padding: 40px 32px;
             overflow-y: auto;
+        }
+        
+        #library {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
             gap: 32px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
         
         .book-card {
             cursor: pointer;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         .book-card:hover {
-            transform: scale(1.05) translateY(-8px);
+            transform: translateY(-12px) scale(1.04);
         }
         
         .book-cover {
             width: 100%;
-            height: 260px;
-            background: #333;
-            border-radius: 8px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            aspect-ratio: 5 / 7.2;
+            border-radius: 10px;
             overflow: hidden;
-            position: relative;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 70%);
+            background: #222;
         }
         
         .book-cover img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
         }
         
         .book-info {
-            margin-top: 12px;
+            margin-top: 14px;
+            text-align: center;
         }
         
         .book-title {
-            font-size: 15px;
+            font-size: 15.5px;
             font-weight: 600;
+            line-height: 1.3;
         }
         
         .book-author {
             font-size: 13px;
             color: #888;
+            margin-top: 4px;
         }
         
-        /* READER VIEW */
-        #reader {
-            display: none;
+        /* READER */
+        #reader-view {
             flex: 1;
+            display: none;
             flex-direction: column;
             background: #0a0a0a;
+        }
+        
+        #reader {
             position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
         
         .reader-header {
@@ -135,34 +142,33 @@
             left: 0;
             right: 0;
             padding: 16px 32px;
-            background: rgba(10,10,10,0.95);
+            background: rgba(15,15,15,0.97);
             display: flex;
             align-items: center;
             justify-content: space-between;
             z-index: 200;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.4s;
         }
         
         .reader-content {
             flex: 1;
-            padding: 80px 120px 60px;
+            padding: 100px 80px 80px;
             overflow-y: auto;
-            line-height: 1.75;
-            font-size: 18px;
+            line-height: 1.82;
+            font-size: 18.5px;
             max-width: 720px;
             margin: 0 auto;
             text-align: justify;
-            background: #111;
-            box-shadow: 0 0 80px rgba(0,0,0,0.8);
+            background: #111111;
         }
         
         .reader-content h1 {
             font-family: 'Playfair Display', serif;
             text-align: center;
-            margin-bottom: 48px;
-            font-size: 32px;
-            color: #ddd;
+            margin-bottom: 60px;
+            font-size: 34px;
+            color: #e0e0e0;
         }
         
         .reader-footer {
@@ -170,84 +176,75 @@
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 16px 32px;
-            background: rgba(10,10,10,0.95);
+            padding: 18px 32px;
+            background: rgba(15,15,15,0.97);
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            font-size: 13px;
-            color: #666;
+            font-size: 13.5px;
+            color: #777;
             z-index: 200;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 16px;
-            align-items: center;
-        }
-        
-        button {
-            background: none;
-            border: none;
-            color: #ccc;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 50%;
-            transition: all 0.2s;
-        }
-        
-        button:hover {
-            background: #333;
-            color: white;
         }
         
         .progress {
             flex: 1;
             height: 3px;
             background: #333;
-            position: relative;
             margin: 0 24px;
+            border-radius: 9999px;
         }
         
         .progress-bar {
             height: 100%;
-            width: 35%;
-            background: var(--accent);
+            width: 42%;
+            background: #ffcc00;
+            border-radius: 9999px;
         }
         
-        /* Floating menu button like Apple Books */
         .fab {
             position: absolute;
             bottom: 32px;
             right: 32px;
-            width: 56px;
-            height: 56px;
+            width: 60px;
+            height: 60px;
             background: #222;
+            color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            font-size: 26px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             cursor: pointer;
             z-index: 300;
+            transition: 0.2s;
         }
         
+        .fab:hover { background: #333; transform: scale(1.1); }
+        
+        /* Modal */
         .modal {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.9);
+            background: rgba(0,0,0,0.92);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
         
         .modal-content {
-            background: #1e1e1e;
+            background: #1f1f1f;
             padding: 32px;
-            border-radius: 16px;
+            border-radius: 18px;
             width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+        }
+        
+        button {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -258,139 +255,113 @@
             <a href="#" onclick="switchView('library')" class="active" id="lib-tab">Biblioteca</a>
             <a href="#" onclick="switchView('reader')" id="read-tab">Leyendo</a>
         </div>
-        <div style="color: #666; font-size: 14px;">PC Reader</div>
+        <div style="color:#666;font-size:14px;">Reader para PC</div>
     </header>
     
     <div class="main">
-        <!-- LIBRARY -->
+        <!-- Biblioteca -->
         <div id="library-view">
-            <div id="library">
-                <!-- Books populated by JS -->
-            </div>
+            <div id="library"></div>
         </div>
         
-        <!-- READER -->
+        <!-- Lector -->
         <div id="reader-view">
             <div id="reader">
                 <div class="reader-header" id="reader-header">
-                    <button onclick="exitReader()">← Volver</button>
-                    <div style="font-weight: 600; font-size: 15px;" id="book-title-header">Animal Farm</div>
-                    <button onclick="toggleMenu()">Aa</button>
+                    <button onclick="exitReader()" style="font-size:22px;">←</button>
+                    <div style="font-weight:600;" id="book-title-header"></div>
+                    <button onclick="toggleMenu()" style="font-size:22px;">Aa</button>
                 </div>
                 
                 <div class="reader-content" id="reader-content">
-                    <h1>Animal Farm</h1>
-                    <p id="chapter-text">still unfed. At last they could stand it no longer. One of the cows broke in the door of the store-shed with her horn and all the animals began to help themselves from the bins. It was just then that Mr. Jones woke up. The next moment he and his four men were in the store-shed with whips in their hands, lashing out in all directions. This was more than the hungry animals could bear. With one accord, though nothing of the kind had been planned beforehand, they flung themselves upon their tormentors. Jones and his men suddenly found themselves being butted and kicked from all sides. The situation was quite out of their control. They had never...</p>
-                    <div style="text-align: center; margin-top: 60px; color: #555; font-size: 14px;">Página 39</div>
+                    <!-- Contenido dinámico -->
                 </div>
                 
                 <div class="reader-footer">
-                    <div>George Orwell</div>
-                    <div class="progress">
-                        <div class="progress-bar"></div>
-                    </div>
-                    <div>39 / 140</div>
+                    <span id="book-author-footer"></span>
+                    <div class="progress"><div class="progress-bar"></div></div>
+                    <span>Pág. <span id="current-page">39</span> / 140</span>
                 </div>
                 
-                <!-- Floating action button -->
                 <div class="fab" onclick="toggleMenu()">Aa</div>
             </div>
         </div>
     </div>
     
-    <!-- Settings Modal -->
+    <!-- Modal Ajustes -->
     <div class="modal" id="settings-modal">
         <div class="modal-content">
-            <h2 style="margin-bottom: 24px; text-align: center;">Apariencia</h2>
+            <h3 style="text-align:center;margin-bottom:24px;">Apariencia del libro</h3>
             
-            <div style="margin-bottom: 20px;">
-                <label>Tamaño de fuente</label>
-                <div style="display: flex; gap: 12px; margin-top: 8px;">
-                    <button onclick="changeFontSize(-2)" style="flex:1; padding: 12px;">A−</button>
-                    <button onclick="changeFontSize(2)" style="flex:1; padding: 12px;">A+</button>
+            <div style="margin-bottom:20px;">
+                <strong>Tamaño de letra</strong>
+                <div style="display:flex;gap:12px;margin-top:10px;">
+                    <button onclick="changeFontSize(-2)" style="flex:1;padding:14px;background:#333;border-radius:8px;">A−</button>
+                    <button onclick="changeFontSize(2)" style="flex:1;padding:14px;background:#333;border-radius:8px;">A+</button>
                 </div>
             </div>
             
-            <div style="margin-bottom: 20px;">
-                <label>Tema</label>
-                <div style="display: flex; gap: 8px; margin-top: 8px;">
-                    <button onclick="setTheme('dark')" style="flex:1; background:#111; color:white; padding:12px;">Oscuro</button>
-                    <button onclick="setTheme('sepia')" style="flex:1; background:#f4e4c9; color:#333; padding:12px;">Sepia</button>
-                </div>
-            </div>
-            
-            <button onclick="closeMenu()" style="width:100%; padding:14px; background:#333; color:white; border:none; border-radius:8px; margin-top:16px;">Cerrar</button>
+            <button onclick="closeMenu()" style="width:100%;padding:16px;background:#333;border-radius:12px;margin-top:12px;">
+                Cerrar
+            </button>
         </div>
     </div>
     
     <script>
-        // Sample books
+        let currentFontSize = 18.5;
+        
         const books = [
             {
                 id: 1,
                 title: "Animal Farm",
                 author: "George Orwell",
-                cover: "https://picsum.photos/id/1015/400/520",
-                content: "still unfed. At last they could stand it no longer..."
+                cover: "https://picsum.photos/id/1015/800/1100", // Reemplaza con tu imagen real si quieres
+                content: `<h1>Animal Farm</h1>
+                <p>still unfed. At last they could stand it no longer. One of the cows broke in the door of the store-shed with her horn and all the animals began to help themselves from the bins. It was just then that Mr. Jones woke up. The next moment he and his four men were in the store-shed with whips in their hands, lashing out in all directions...</p>`
             },
             {
                 id: 2,
                 title: "1984",
                 author: "George Orwell",
-                cover: "https://picsum.photos/id/201/400/520",
-                content: "It was a bright cold day in April, and the clocks were striking thirteen..."
-            },
-            {
-                id: 3,
-                title: "The Great Gatsby",
-                author: "F. Scott Fitzgerald",
-                cover: "https://picsum.photos/id/870/400/520",
-                content: "In my younger and more vulnerable years my father gave me some advice..."
+                cover: "https://picsum.photos/id/201/800/1100",
+                content: `<h1>1984</h1>
+                <p>It was a bright cold day in April, and the clocks were striking thirteen. Winston Smith, his chin nuzzled into his breast in an effort to escape the vile wind, slipped quickly through the glass doors of Victory Mansions...</p>`
             }
         ];
-        
-        let currentFontSize = 18;
-        let currentBook = null;
         
         function renderLibrary() {
             const container = document.getElementById('library');
             container.innerHTML = '';
             
             books.forEach(book => {
-                const card = document.createElement('div');
-                card.className = 'book-card';
-                card.innerHTML = `
-                    <div class="book-cover">
-                        <img src="${book.cover}" alt="${book.title}">
-                    </div>
-                    <div class="book-info">
-                        <div class="book-title">${book.title}</div>
-                        <div class="book-author">${book.author}</div>
+                const cardHTML = `
+                    <div class="book-card" onclick="openBook(${book.id})">
+                        <div class="book-cover">
+                            <img src="${book.cover}" alt="${book.title}">
+                        </div>
+                        <div class="book-info">
+                            <div class="book-title">${book.title}</div>
+                            <div class="book-author">${book.author}</div>
+                        </div>
                     </div>
                 `;
-                card.onclick = () => openBook(book);
-                container.appendChild(card);
+                container.innerHTML += cardHTML;
             });
         }
         
-        function openBook(book) {
-            currentBook = book;
-            document.getElementById('book-title-header').textContent = book.title;
+        function openBook(id) {
+            const book = books.find(b => b.id === id);
+            if (!book) return;
             
-            // Populate sample text
-            const contentEl = document.getElementById('reader-content');
-            contentEl.innerHTML = `
-                <h1>${book.title}</h1>
-                <p style="font-size: ${currentFontSize}px; line-height: 1.8;">${book.content} (Este es un lector de demostración. Puedes reemplazar el texto con tu propio contenido o extenderlo para cargar archivos TXT/EPUB).</p>
-                <div style="text-align: center; margin-top: 80px; color: #555;">Página 39 de 140</div>
-            `;
+            document.getElementById('book-title-header').textContent = book.title;
+            document.getElementById('book-author-footer').textContent = book.author;
+            document.getElementById('reader-content').innerHTML = book.content;
             
             switchView('reader');
             
-            // Show header after a delay
             setTimeout(() => {
                 document.getElementById('reader-header').style.opacity = '1';
-            }, 800);
+            }, 300);
         }
         
         function exitReader() {
@@ -416,39 +387,20 @@
         function changeFontSize(delta) {
             currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
             const content = document.getElementById('reader-content');
-            if (content) content.style.fontSize = currentFontSize + 'px';
+            if (content) content.style.fontSize = `${currentFontSize}px`;
         }
         
-        function setTheme(theme) {
-            const reader = document.getElementById('reader');
-            if (theme === 'sepia') {
-                reader.style.background = '#f4e4c9';
-                reader.querySelector('.reader-content').style.background = '#f8e9d0';
-                reader.querySelector('.reader-content').style.color = '#3c2f2f';
-            } else {
-                reader.style.background = '#0a0a0a';
-                const content = reader.querySelector('.reader-content');
-                content.style.background = '#111';
-                content.style.color = '#f5f5f5';
-            }
-        }
-        
-        // Keyboard support
-        document.addEventListener('keydown', (e) => {
-            if (document.getElementById('reader-view').style.display === 'flex') {
-                if (e.key === 'Escape') exitReader();
-                if (e.key === 'ArrowRight') console.log('Next page');
-                if (e.key === 'ArrowLeft') console.log('Previous page');
-            }
-        });
-        
-        // Initialize
+        // Inicializar
         window.onload = () => {
             renderLibrary();
             switchView('library');
             
-            // Make it PWA-ready
-            console.log('%c✅ Lector estilo Apple Books listo para GitHub Pages', 'color: #ffcc00; font-size: 14px;');
+            // Teclado
+            document.addEventListener('keydown', e => {
+                if (document.getElementById('reader-view').style.display === 'flex') {
+                    if (e.key === "Escape") exitReader();
+                }
+            });
         };
     </script>
 </body>
