@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Libros • Apple Books Style</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Georgia&display=swap');
+        
+        :root {
+            --bg: #121212;
+            --text: #f5f5f5;
+            --accent: #ffcc00;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Georgia', serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: #1e1e1e;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #333;
+            z-index: 100;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: white;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 32px;
+            font-size: 15px;
+        }
+        
+        .nav a {
+            color: #aaa;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .nav a.active {
+            background: #333;
+            color: white;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        
+        /* LIBRARY VIEW */
+        #library {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 32px;
+        }
+        
+        .book-card {
+            cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .book-card:hover {
+            transform: scale(1.05) translateY(-8px);
+        }
+        
+        .book-cover {
+            width: 100%;
+            height: 260px;
+            background: #333;
+            border-radius: 8px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .book-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .book-info {
+            margin-top: 12px;
+        }
+        
+        .book-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        
+        .book-author {
+            font-size: 13px;
+            color: #888;
+        }
+        
+        /* READER VIEW */
+        #reader {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            background: #0a0a0a;
+            position: relative;
+        }
+        
+        .reader-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 32px;
+            background: rgba(10,10,10,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .reader-content {
+            flex: 1;
+            padding: 80px 120px 60px;
+            overflow-y: auto;
+            line-height: 1.75;
+            font-size: 18px;
+            max-width: 720px;
+            margin: 0 auto;
+            text-align: justify;
+            background: #111;
+            box-shadow: 0 0 80px rgba(0,0,0,0.8);
+        }
+        
+        .reader-content h1 {
+            font-family: 'Playfair Display', serif;
+            text-align: center;
+            margin-bottom: 48px;
+            font-size: 32px;
+            color: #ddd;
+        }
+        
+        .reader-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 32px;
+            background: rgba(10,10,10,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #666;
+            z-index: 200;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        
+        button {
+            background: none;
+            border: none;
+            color: #ccc;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #333;
+            color: white;
+        }
+        
+        .progress {
+            flex: 1;
+            height: 3px;
+            background: #333;
+            position: relative;
+            margin: 0 24px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 35%;
+            background: var(--accent);
+        }
+        
+        /* Floating menu button like Apple Books */
+        .fab {
+            position: absolute;
+            bottom: 32px;
+            right: 32px;
+            width: 56px;
+            height: 56px;
+            background: #222;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            cursor: pointer;
+            z-index: 300;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: #1e1e1e;
+            padding: 32px;
+            border-radius: 16px;
+            width: 380px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Libros</div>
+        <div class="nav">
+            <a href="#" onclick="switchView('library')" class="active" id="lib-tab">Biblioteca</a>
+            <a href="#" onclick="switchView('reader')" id="read-tab">Leyendo</a>
+        </div>
+        <div style="color: #666; font-size: 14px;">PC Reader</div>
+    </header>
+    
+    <div class="main">
+        <!-- LIBRARY -->
+        <div id="library-view">
+            <div id="library">
+                <!-- Books populated by JS -->
+            </div>
+        </div>
+        
+        <!-- READER -->
+        <div id="reader-view">
+            <div id="reader">
+                <div class="reader-header" id="reader-header">
+                    <button onclick="exitReader()">← Volver</button>
+                    <div style="font-weight: 600; font-size: 15px;" id="book-title-header">Animal Farm</div>
+                    <button onclick="toggleMenu()">Aa</button>
+                </div>
+                
+                <div class="reader-content" id="reader-content">
+                    <h1>Animal Farm</h1>
+                    <p id="chapter-text">still unfed. At last they could stand it no longer. One of the cows broke in the door of the store-shed with her horn and all the animals began to help themselves from the bins. It was just then that Mr. Jones woke up. The next moment he and his four men were in the store-shed with whips in their hands, lashing out in all directions. This was more than the hungry animals could bear. With one accord, though nothing of the kind had been planned beforehand, they flung themselves upon their tormentors. Jones and his men suddenly found themselves being butted and kicked from all sides. The situation was quite out of their control. They had never...</p>
+                    <div style="text-align: center; margin-top: 60px; color: #555; font-size: 14px;">Página 39</div>
+                </div>
+                
+                <div class="reader-footer">
+                    <div>George Orwell</div>
+                    <div class="progress">
+                        <div class="progress-bar"></div>
+                    </div>
+                    <div>39 / 140</div>
+                </div>
+                
+                <!-- Floating action button -->
+                <div class="fab" onclick="toggleMenu()">Aa</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 24px; text-align: center;">Apariencia</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label>Tamaño de fuente</label>
+                <div style="display: flex; gap: 12px; margin-top: 8px;">
+                    <button onclick="changeFontSize(-2)" style="flex:1; padding: 12px;">A−</button>
+                    <button onclick="changeFontSize(2)" style="flex:1; padding: 12px;">A+</button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label>Tema</label>
+                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <button onclick="setTheme('dark')" style="flex:1; background:#111; color:white; padding:12px;">Oscuro</button>
+                    <button onclick="setTheme('sepia')" style="flex:1; background:#f4e4c9; color:#333; padding:12px;">Sepia</button>
+                </div>
+            </div>
+            
+            <button onclick="closeMenu()" style="width:100%; padding:14px; background:#333; color:white; border:none; border-radius:8px; margin-top:16px;">Cerrar</button>
+        </div>
+    </div>
+    
+    <script>
+        // Sample books
+        const books = [
+            {
+                id: 1,
+                title: "Animal Farm",
+                author: "George Orwell",
+                cover: "https://picsum.photos/id/1015/400/520",
+                content: "still unfed. At last they could stand it no longer..."
+            },
+            {
+                id: 2,
+                title: "1984",
+                author: "George Orwell",
+                cover: "https://picsum.photos/id/201/400/520",
+                content: "It was a bright cold day in April, and the clocks were striking thirteen..."
+            },
+            {
+                id: 3,
+                title: "The Great Gatsby",
+                author: "F. Scott Fitzgerald",
+                cover: "https://picsum.photos/id/870/400/520",
+                content: "In my younger and more vulnerable years my father gave me some advice..."
+            }
+        ];
+        
+        let currentFontSize = 18;
+        let currentBook = null;
+        
+        function renderLibrary() {
+            const container = document.getElementById('library');
+            container.innerHTML = '';
+            
+            books.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                card.innerHTML = `
+                    <div class="book-cover">
+                        <img src="${book.cover}" alt="${book.title}">
+                    </div>
+                    <div class="book-info">
+                        <div class="book-title">${book.title}</div>
+                        <div class="book-author">${book.author}</div>
+                    </div>
+                `;
+                card.onclick = () => openBook(book);
+                container.appendChild(card);
+            });
+        }
+        
+        function openBook(book) {
+            currentBook = book;
+            document.getElementById('book-title-header').textContent = book.title;
+            
+            // Populate sample text
+            const contentEl = document.getElementById('reader-content');
+            contentEl.innerHTML = `
+                <h1>${book.title}</h1>
+                <p style="font-size: ${currentFontSize}px; line-height: 1.8;">${book.content} (Este es un lector de demostración. Puedes reemplazar el texto con tu propio contenido o extenderlo para cargar archivos TXT/EPUB).</p>
+                <div style="text-align: center; margin-top: 80px; color: #555;">Página 39 de 140</div>
+            `;
+            
+            switchView('reader');
+            
+            // Show header after a delay
+            setTimeout(() => {
+                document.getElementById('reader-header').style.opacity = '1';
+            }, 800);
+        }
+        
+        function exitReader() {
+            switchView('library');
+        }
+        
+        function switchView(view) {
+            document.getElementById('library-view').style.display = view === 'library' ? 'block' : 'none';
+            document.getElementById('reader-view').style.display = view === 'reader' ? 'flex' : 'none';
+            
+            document.getElementById('lib-tab').classList.toggle('active', view === 'library');
+            document.getElementById('read-tab').classList.toggle('active', view === 'reader');
+        }
+        
+        function toggleMenu() {
+            document.getElementById('settings-modal').style.display = 'flex';
+        }
+        
+        function closeMenu() {
+            document.getElementById('settings-modal').style.display = 'none';
+        }
+        
+        function changeFontSize(delta) {
+            currentFontSize = Math.max(14, Math.min(28, currentFontSize + delta));
+            const content = document.getElementById('reader-content');
+            if (content) content.style.fontSize = currentFontSize + 'px';
+        }
+        
+        function setTheme(theme) {
+            const reader = document.getElementById('reader');
+            if (theme === 'sepia') {
+                reader.style.background = '#f4e4c9';
+                reader.querySelector('.reader-content').style.background = '#f8e9d0';
+                reader.querySelector('.reader-content').style.color = '#3c2f2f';
+            } else {
+                reader.style.background = '#0a0a0a';
+                const content = reader.querySelector('.reader-content');
+                content.style.background = '#111';
+                content.style.color = '#f5f5f5';
+            }
+        }
+        
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('reader-view').style.display === 'flex') {
+                if (e.key === 'Escape') exitReader();
+                if (e.key === 'ArrowRight') console.log('Next page');
+                if (e.key === 'ArrowLeft') console.log('Previous page');
+            }
+        });
+        
+        // Initialize
+        window.onload = () => {
+            renderLibrary();
+            switchView('library');
+            
+            // Make it PWA-ready
+            console.log('%c✅ Lector estilo Apple Books listo para GitHub Pages', 'color: #ffcc00; font-size: 14px;');
+        };
+    </script>
+</body>
+</html>
