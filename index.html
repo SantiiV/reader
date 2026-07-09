@@ -513,8 +513,6 @@
         pdfContainer.classList.toggle('scrollmode', prefs.scrollMode);
         el('tapPrev').classList.toggle('hidden', prefs.scrollMode);
         el('tapNext').classList.toggle('hidden', prefs.scrollMode);
-        pdfZoom = (prefs.size || 100) / 100;
-        pdfZoomLayer.style.transform = `scale(${pdfZoom})`;
 
         pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
         if (prefs.scrollMode) await renderPdfContinuous(meta.progress && meta.progress.page);
@@ -563,6 +561,36 @@
     renderLibrary();
   }, 500);
 
+  /* ---------- PDF: shared scale/render helpers ---------- */
+  const MAX_READING_WIDTH = 780; // comfortable column width in CSS px, like a real book page
+  const RENDER_DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function pdfDisplayScale(naturalWidth, naturalHeight, mode){
+    const { w: availWidth, h: availHeight } = viewerWrapSize();
+    const zoomMult = (prefs.size || 100) / 100;
+    if (mode === 'paginated') {
+      const fit = Math.min(availWidth / naturalWidth, availHeight / naturalHeight) * 0.97;
+      return fit * zoomMult;
+    }
+    const readingWidth = Math.min(availWidth * 0.94, MAX_READING_WIDTH);
+    return (readingWidth / naturalWidth) * zoomMult;
+  }
+
+  // Renders a page as a canvas sized for crisp display: rasterizes at
+  // displayScale * devicePixelRatio, but the element itself is sized (via
+  // CSS width/height) to displayScale — so it always looks sharp, at any zoom.
+  async function renderPageCrisp(page, displayScale){
+    const renderViewport = page.getViewport({ scale: displayScale * RENDER_DPR });
+    const displayViewport = page.getViewport({ scale: displayScale });
+    const canvas = document.createElement('canvas');
+    canvas.width = renderViewport.width;
+    canvas.height = renderViewport.height;
+    canvas.style.width = displayViewport.width + 'px';
+    canvas.style.height = displayViewport.height + 'px';
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderViewport }).promise;
+    return { canvas, displayViewport };
+  }
+
   /* ---------- PDF: paginated ---------- */
   async function showPdfPage(pageNum){
     pageNum = Math.max(1, Math.min(pageNum, pdfDoc.numPages));
@@ -570,18 +598,12 @@
     pdfPages.innerHTML = '';
     const page = await pdfDoc.getPage(pageNum);
     const natural = page.getViewport({ scale: 1 });
-    const { w: availWidth, h: availHeight } = viewerWrapSize();
-    // Fit the whole page inside the viewport (width AND height), no cropping.
-    const fitScale = Math.min(availWidth / natural.width, availHeight / natural.height) * 0.97;
-    const baseScale = fitScale > 0 ? fitScale : 1;
-    const viewport = page.getViewport({ scale: baseScale });
+    const displayScale = pdfDisplayScale(natural.width, natural.height, 'paginated');
+    const { canvas, displayViewport } = await renderPageCrisp(page, displayScale);
     const wrapper = document.createElement('div');
     wrapper.className = 'pdf-page-wrapper';
-    const canvas = document.createElement('canvas');
-    canvas.width = viewport.width; canvas.height = viewport.height;
-    wrapper.style.width = viewport.width + 'px';
-    wrapper.style.height = viewport.height + 'px';
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    wrapper.style.width = displayViewport.width + 'px';
+    wrapper.style.height = displayViewport.height + 'px';
     wrapper.appendChild(canvas);
     pdfPages.appendChild(wrapper);
 
@@ -607,18 +629,17 @@
     pdfPages.innerHTML = '';
     const wrappers = [];
     const firstPage = await pdfDoc.getPage(1);
-    const naturalWidth = firstPage.getViewport({ scale: 1 }).width;
-    const availWidth = viewerWrapWidth();
-    const baseScale = ((availWidth / naturalWidth) || 1.4) * 0.96;
+    const natural = firstPage.getViewport({ scale: 1 });
+    const displayScale = pdfDisplayScale(natural.width, natural.height, 'scroll');
 
     for (let i = 1; i <= pdfDoc.numPages; i++) {
       const page = await pdfDoc.getPage(i);
-      const viewport = page.getViewport({ scale: baseScale || 1.4 });
+      const displayViewport = page.getViewport({ scale: displayScale });
       const wrapper = document.createElement('div');
       wrapper.className = 'pdf-page-wrapper';
       wrapper.dataset.pageNum = i;
-      wrapper.style.width = viewport.width + 'px';
-      wrapper.style.height = viewport.height + 'px';
+      wrapper.style.width = displayViewport.width + 'px';
+      wrapper.style.height = displayViewport.height + 'px';
       pdfPages.appendChild(wrapper);
       wrappers.push(wrapper);
     }
@@ -632,10 +653,7 @@
           const pageNum = parseInt(wrapper.dataset.pageNum, 10);
           try {
             const page = await pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: baseScale || 1.4 });
-            const canvas = document.createElement('canvas');
-            canvas.width = viewport.width; canvas.height = viewport.height;
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+            const { canvas } = await renderPageCrisp(page, displayScale);
             wrapper.appendChild(canvas);
           } catch(e) { console.warn('[reader] fallo al renderizar página', pageNum, e); }
         }
@@ -740,9 +758,9 @@
     prefs.size = Math.max(70, Math.min(180, prefs.size));
     savePrefs();
     updateSizeUI();
-    if (currentMeta && currentMeta.type === 'pdf') {
-      pdfZoom = prefs.size / 100;
-      pdfZoomLayer.style.transform = `scale(${pdfZoom})`;
+    if (currentMeta && currentMeta.type === 'pdf' && pdfDoc) {
+      if (prefs.scrollMode) renderPdfContinuous(pdfCurrentPage);
+      else showPdfPage(pdfCurrentPage);
     } else if (epubRendition) {
       epubRendition.themes.fontSize(prefs.size + '%');
     }
