@@ -569,10 +569,12 @@
     pdfCurrentPage = pageNum;
     pdfPages.innerHTML = '';
     const page = await pdfDoc.getPage(pageNum);
-    const naturalWidth = page.getViewport({ scale: 1 }).width;
-    const availWidth = viewerWrapWidth();
-    const baseScale = Math.min((availWidth / naturalWidth) || 1.4, 1.8) * 1.3;
-    const viewport = page.getViewport({ scale: baseScale || 1.4 });
+    const natural = page.getViewport({ scale: 1 });
+    const { w: availWidth, h: availHeight } = viewerWrapSize();
+    // Fit the whole page inside the viewport (width AND height), no cropping.
+    const fitScale = Math.min(availWidth / natural.width, availHeight / natural.height) * 0.97;
+    const baseScale = fitScale > 0 ? fitScale : 1;
+    const viewport = page.getViewport({ scale: baseScale });
     const wrapper = document.createElement('div');
     wrapper.className = 'pdf-page-wrapper';
     const canvas = document.createElement('canvas');
@@ -589,10 +591,16 @@
     persistProgress({ pct, page: pageNum });
   }
 
-  function viewerWrapWidth(){
-    const w = el('viewerWrap').clientWidth;
-    return w && w > 0 ? w : window.innerWidth;
+  function viewerWrapSize(){
+    const wrap = el('viewerWrap');
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    return {
+      w: w && w > 0 ? w : window.innerWidth,
+      h: h && h > 0 ? h : window.innerHeight
+    };
   }
+  function viewerWrapWidth(){ return viewerWrapSize().w; }
 
   /* ---------- PDF: continuous scroll (lazy render) ---------- */
   async function renderPdfContinuous(resumePage){
@@ -601,7 +609,7 @@
     const firstPage = await pdfDoc.getPage(1);
     const naturalWidth = firstPage.getViewport({ scale: 1 }).width;
     const availWidth = viewerWrapWidth();
-    const baseScale = Math.min((availWidth / naturalWidth) || 1.4, 1.8) * 1.3;
+    const baseScale = ((availWidth / naturalWidth) || 1.4) * 0.96;
 
     for (let i = 1; i <= pdfDoc.numPages; i++) {
       const page = await pdfDoc.getPage(i);
