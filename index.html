@@ -120,10 +120,11 @@
   /* text-reflow pdf view — real vector text, always crisp */
   #pdfTextWrap {
     width: 100%; height: 100%;
-    display: none; justify-content: center;
+    display: none;
     overflow: hidden;
   }
   #pdfTextContainer {
+    margin: 0 auto;
     color: var(--text);
     font-family: var(--serif);
     line-height: 1.65;
@@ -427,7 +428,7 @@
   function showReaderArea(which){
     viewer.style.display = which === 'epub' ? 'block' : 'none';
     pdfContainer.style.display = which === 'raster' ? (prefs.scrollMode ? 'block' : 'flex') : 'none';
-    pdfTextWrap.style.display = which === 'text' ? 'flex' : 'none';
+    pdfTextWrap.style.display = which === 'text' ? 'block' : 'none';
   }
 
   /* ---------- Library view ---------- */
@@ -693,15 +694,16 @@
     pdfTextContainer.innerHTML = buildParagraphsHtml(paragraphs);
     pdfTextContainer.style.fontSize = fontPx + 'px';
     pdfTextContainer.style.width = colWidth + 'px';
-    pdfTextWrap.style.display = 'flex';
+    pdfTextContainer.style.maxWidth = colWidth + 'px';
+    pdfTextWrap.style.display = 'block';
 
     if (prefs.scrollMode) {
       pdfTextWrap.style.overflowY = 'auto';
       pdfTextWrap.style.overflowX = 'hidden';
-      pdfTextWrap.style.alignItems = 'flex-start';
       pdfTextContainer.style.height = 'auto';
       pdfTextContainer.style.columnWidth = '';
       pdfTextContainer.style.columnGap = '';
+      pdfTextContainer.style.columnFill = '';
       pdfTextContainer.style.overflow = 'visible';
       pdfTextContainer.style.padding = '34px 4px 60px 4px';
 
@@ -723,12 +725,12 @@
     } else {
       pdfTextWrap.style.overflowY = 'hidden';
       pdfTextWrap.style.overflowX = 'hidden';
-      pdfTextWrap.style.alignItems = 'stretch';
       pdfTextWrap.onscroll = null;
 
       pdfTextContainer.style.height = availHeight + 'px';
       pdfTextContainer.style.columnWidth = colWidth + 'px';
       pdfTextContainer.style.columnGap = '0px';
+      pdfTextContainer.style.columnFill = 'auto';
       pdfTextContainer.style.overflow = 'hidden';
       pdfTextContainer.style.padding = '34px 2px';
 
