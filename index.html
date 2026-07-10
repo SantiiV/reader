@@ -294,19 +294,27 @@
     if (idbAvailable) { tx('meta','readwrite').delete(id); tx('files','readwrite').delete(id); tx('textcache','readwrite').delete(id); return; }
     memMeta.delete(id); memFiles.delete(id); memText.delete(id);
   }
+  const TEXT_CACHE_VERSION = 2; // bump when extractPdfParagraphs logic changes, to invalidate stale cached text
   async function saveTextCache(id, paragraphs){
+    const entry = { id, paragraphs, v: TEXT_CACHE_VERSION };
     if (idbAvailable) return new Promise((res, rej) => {
-      const r = tx('textcache','readwrite').put({ id, paragraphs });
+      const r = tx('textcache','readwrite').put(entry);
       r.onsuccess = () => res(); r.onerror = () => rej(r.error);
     });
-    memText.set(id, paragraphs);
+    memText.set(id, entry);
   }
   async function getTextCache(id){
-    if (idbAvailable) return new Promise((res, rej) => {
-      const r = tx('textcache','readonly').get(id);
-      r.onsuccess = () => res(r.result ? r.result.paragraphs : null); r.onerror = () => rej(r.error);
-    });
-    return memText.get(id) || null;
+    let entry;
+    if (idbAvailable) {
+      entry = await new Promise((res, rej) => {
+        const r = tx('textcache','readonly').get(id);
+        r.onsuccess = () => res(r.result || null); r.onerror = () => rej(r.error);
+      });
+    } else {
+      entry = memText.get(id) || null;
+    }
+    if (!entry || entry.v !== TEXT_CACHE_VERSION) return null;
+    return entry.paragraphs;
   }
 
   const prefs = { theme: 'night', size: 100, scrollMode: false };
@@ -545,6 +553,14 @@
   }
 
   /* ---------- PDF text extraction (reflow mode) ---------- */
+  const FOOTER_JUNK_PATTERNS = [
+    /^https?:\/\/\S+$/i,
+    /^Last updated /i,
+    /^eBooks@/i,
+    /university of adelaide/i,
+    /^south australia \d+$/i
+  ];
+
   async function extractPdfParagraphs(doc){
     const paragraphs = [];
     for (let p = 1; p <= doc.numPages; p++) {
@@ -567,13 +583,34 @@
       });
       lines.sort((a,b) => b.y - a.y);
 
-      const lineData = lines.map(line => {
+      let lineData = lines.map(line => {
         const sorted = line.items.slice().sort((a,b) => a.transform[4]-b.transform[4]);
         const text = sorted.map(it => it.str).join('').replace(/\s+/g,' ').trim();
         const x0 = sorted[0] ? sorted[0].transform[4] : 0;
-        return { text, x0 };
+        const height = sorted.reduce((m, it) => Math.max(m, it.height || Math.abs(it.transform[3]) || 0), 0);
+        return { text, x0, height, itemCount: sorted.length };
       }).filter(l => l.text.length > 0);
       if (!lineData.length) continue;
+
+      // Remove footer/URL boilerplate that sometimes leaks into the text layer.
+      lineData = lineData.filter(l => !FOOTER_JUNK_PATTERNS.some(re => re.test(l.text)));
+      if (!lineData.length) continue;
+
+      // Detect decorative drop-cap letters (single oversized character starting a chapter)
+      // and merge them into the following line instead of leaving them out of order.
+      const bodyHeights = lineData.filter(l => l.text.length > 3).map(l => Math.round(l.height));
+      const typicalHeight = bodyHeights.length ? mostCommon(bodyHeights) : 0;
+      let pendingDropCap = '';
+      lineData = lineData.reduce((acc, l) => {
+        const isDropCap = l.itemCount === 1 && l.text.length === 1 && typicalHeight > 0 && l.height > typicalHeight * 1.6;
+        if (isDropCap) { pendingDropCap += l.text; return acc; }
+        if (pendingDropCap) {
+          l = Object.assign({}, l, { text: pendingDropCap + l.text.replace(/^\s+/, '') });
+          pendingDropCap = '';
+        }
+        acc.push(l);
+        return acc;
+      }, []);
 
       const bodyLeft = mostCommon(lineData.map(l => Math.round(l.x0)));
       const INDENT_THRESH = 8;
@@ -690,7 +727,7 @@
   let pdfTextPageIndex = 0;
 
   function paginateParagraphs(paragraphs, colWidth, availHeight, fontPx){
-    const pageHeight = availHeight - 68; // matches the 34px top/bottom padding used when displaying
+    const pageHeight = availHeight - 68 - 22; // padding + safety buffer so a borderline line never gets clipped
     const measurer = document.createElement('div');
     measurer.style.cssText = `position:fixed; left:-9999px; top:0; visibility:hidden; width:${colWidth}px; font-family:Georgia,'Iowan Old Style','Palatino Linotype',serif; font-size:${fontPx}px; line-height:1.65;`;
     document.body.appendChild(measurer);
