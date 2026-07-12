@@ -606,6 +606,8 @@
 
       pagesLineData.push(lineData);
       lineData.forEach(l => lineFreq.set(l.text, (lineFreq.get(l.text) || 0) + 1));
+
+      if (p % 20 === 0) await new Promise(r => setTimeout(r, 0));
     }
 
     const repeatThreshold = Math.max(3, Math.ceil(doc.numPages * 0.25));
@@ -752,6 +754,7 @@
       }
 
       loadingMsg.style.display = 'none';
+      lastLayoutSize = viewerWrapSize();
     } catch(err) {
       showFatalError(err, 'openBook');
     }
@@ -1085,17 +1088,28 @@
 
   function updateScrollSwitchUI(){ el('scrollSwitch').classList.toggle('on', !!prefs.scrollMode); }
   el('scrollSwitch').addEventListener('click', async () => {
+    if (!currentMeta) {
+      prefs.scrollMode = !prefs.scrollMode;
+      savePrefs();
+      updateScrollSwitchUI();
+      return;
+    }
+
+    // Capture the resume position using the OLD mode/DOM before flipping —
+    // currentTextResume() branches on prefs.scrollMode, so it must run first.
+    const isPdfText = currentMeta.type === 'pdf' && pdfMode === 'text';
+    const textResume = isPdfText ? currentTextResume() : null;
+
     prefs.scrollMode = !prefs.scrollMode;
     savePrefs();
     updateScrollSwitchUI();
-    if (!currentMeta) return;
     loadingMsg.style.display = 'flex';
     try {
       if (currentMeta.type === 'pdf') {
         el('tapPrev').classList.toggle('hidden', prefs.scrollMode);
         el('tapNext').classList.toggle('hidden', prefs.scrollMode);
         if (pdfMode === 'text') {
-          renderPdfText(pdfParagraphsCurrent, currentTextResume());
+          renderPdfText(pdfParagraphsCurrent, textResume);
         } else {
           pdfContainer.classList.toggle('scrollmode', prefs.scrollMode);
           showReaderArea('raster');
@@ -1144,6 +1158,35 @@
   /* ---------- Boot ---------- */
   window.addEventListener('error', e => { console.error('[reader] error global', e.error || e.message); });
   window.addEventListener('unhandledrejection', e => { console.error('[reader] promesa no manejada', e.reason); });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && el('settingsPanel').classList.contains('active')) {
+      el('settingsPanel').classList.remove('active');
+    }
+  });
+
+  // Re-layout the open book if the window is resized (e.g. maximizing,
+  // rotating a tablet, or dragging the browser to a different size) so
+  // pagination and column width stay accurate instead of going stale.
+  let lastLayoutSize = { w: 0, h: 0 };
+  function handleViewportResize(){
+    if (!readerScreen.classList.contains('active') || !currentMeta) return;
+    const { w, h } = viewerWrapSize();
+    if (Math.abs(w - lastLayoutSize.w) < 24 && Math.abs(h - lastLayoutSize.h) < 24) return;
+    lastLayoutSize = { w, h };
+
+    if (currentMeta.type === 'pdf') {
+      if (pdfMode === 'text' && pdfParagraphsCurrent) {
+        renderPdfText(pdfParagraphsCurrent, currentTextResume());
+      } else if (pdfDoc) {
+        if (prefs.scrollMode) renderPdfRasterContinuous(pdfCurrentPage);
+        else showPdfRasterPage(pdfCurrentPage);
+      }
+    } else if (epubRendition) {
+      try { epubRendition.resize(); } catch(e) { /* not fatal */ }
+    }
+  }
+  window.addEventListener('resize', debounce(handleViewportResize, 300));
 
   async function boot(){
     loadPrefs();
