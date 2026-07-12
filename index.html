@@ -131,6 +131,13 @@
   }
   #pdfTextContainer p { margin: 0 0 0.9em 0; text-indent: 1.3em; }
   #pdfTextContainer p:first-child { text-indent: 0; }
+  #pdfTextContainer p.chapter-heading {
+    text-indent: 0;
+    text-align: center;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin: 0 0 1.4em 0;
+  }
 
   .tapzone { position: absolute; top: 0; bottom: 0; width: 26%; z-index: 5; }
   #tapPrev { left: 0; } #tapNext { right: 0; }
@@ -294,7 +301,7 @@
     if (idbAvailable) { tx('meta','readwrite').delete(id); tx('files','readwrite').delete(id); tx('textcache','readwrite').delete(id); return; }
     memMeta.delete(id); memFiles.delete(id); memText.delete(id);
   }
-  const TEXT_CACHE_VERSION = 2; // bump when extractPdfParagraphs logic changes, to invalidate stale cached text
+  const TEXT_CACHE_VERSION = 3; // bump when extractPdfParagraphs logic changes, to invalidate stale cached text
   async function saveTextCache(id, paragraphs){
     const entry = { id, paragraphs, v: TEXT_CACHE_VERSION };
     if (idbAvailable) return new Promise((res, rej) => {
@@ -560,17 +567,23 @@
     /university of adelaide/i,
     /^south australia \d+$/i
   ];
+  const CHAPTER_HEADING_RE = /^CHAPTER\s+([IVXLCDM]+|\d+)\.?$/i;
 
   async function extractPdfParagraphs(doc){
-    const paragraphs = [];
+    // Pass 1: collect raw lines per page, and count how often identical
+    // lines repeat across pages (running headers/footers repeat a lot;
+    // real prose essentially never repeats verbatim).
+    const pagesLineData = [];
+    const lineFreq = new Map();
+
     for (let p = 1; p <= doc.numPages; p++) {
       let content;
       try {
         const page = await doc.getPage(p);
         content = await page.getTextContent();
-      } catch(e) { continue; }
+      } catch(e) { pagesLineData.push([]); continue; }
       const items = content.items;
-      if (!items.length) continue;
+      if (!items.length) { pagesLineData.push([]); continue; }
 
       const lines = [];
       let curLine = null;
@@ -583,53 +596,82 @@
       });
       lines.sort((a,b) => b.y - a.y);
 
-      let lineData = lines.map(line => {
+      const lineData = lines.map(line => {
         const sorted = line.items.slice().sort((a,b) => a.transform[4]-b.transform[4]);
         const text = sorted.map(it => it.str).join('').replace(/\s+/g,' ').trim();
         const x0 = sorted[0] ? sorted[0].transform[4] : 0;
         const height = sorted.reduce((m, it) => Math.max(m, it.height || Math.abs(it.transform[3]) || 0), 0);
         return { text, x0, height, itemCount: sorted.length };
       }).filter(l => l.text.length > 0);
-      if (!lineData.length) continue;
 
-      // Remove footer/URL boilerplate that sometimes leaks into the text layer.
-      lineData = lineData.filter(l => !FOOTER_JUNK_PATTERNS.some(re => re.test(l.text)));
-      if (!lineData.length) continue;
+      pagesLineData.push(lineData);
+      lineData.forEach(l => lineFreq.set(l.text, (lineFreq.get(l.text) || 0) + 1));
+    }
 
-      // Detect decorative drop-cap letters (single oversized character starting a chapter)
-      // and merge them into the following line instead of leaving them out of order.
+    const repeatThreshold = Math.max(3, Math.ceil(doc.numPages * 0.25));
+    const repeatedLines = new Set();
+    lineFreq.forEach((count, text) => { if (count >= repeatThreshold) repeatedLines.add(text); });
+
+    // Pass 2: build paragraphs, skipping repeated running headers/footers,
+    // pulling out chapter headings, and correctly re-attaching drop caps.
+    const paragraphs = [];
+    pagesLineData.forEach((rawLineData, pIdx) => {
+      const p = pIdx + 1;
+      const lineData = rawLineData.filter(l =>
+        !repeatedLines.has(l.text) && !FOOTER_JUNK_PATTERNS.some(re => re.test(l.text))
+      );
+      if (!lineData.length) return;
+
       const bodyHeights = lineData.filter(l => l.text.length > 3).map(l => Math.round(l.height));
       const typicalHeight = bodyHeights.length ? mostCommon(bodyHeights) : 0;
-      let pendingDropCap = '';
-      lineData = lineData.reduce((acc, l) => {
-        const isDropCap = l.itemCount === 1 && l.text.length === 1 && typicalHeight > 0 && l.height > typicalHeight * 1.6;
-        if (isDropCap) { pendingDropCap += l.text; return acc; }
-        if (pendingDropCap) {
-          l = Object.assign({}, l, { text: pendingDropCap + l.text.replace(/^\s+/, '') });
-          pendingDropCap = '';
-        }
-        acc.push(l);
-        return acc;
-      }, []);
+      const isDropCapLine = l => l.itemCount === 1 && l.text.length === 1 && typicalHeight > 0 && l.height > typicalHeight * 1.6;
 
-      const bodyLeft = mostCommon(lineData.map(l => Math.round(l.x0)));
+      const bodyLeft = mostCommon(
+        lineData.filter(l => !isDropCapLine(l) && !CHAPTER_HEADING_RE.test(l.text)).map(l => Math.round(l.x0))
+      );
       const INDENT_THRESH = 8;
 
+      let pageDropCap = '';
+      let firstParaIdxThisPage = null;
+      let lastHeadingParaIdx = null;
+
       lineData.forEach(line => {
-        const isNewPara = paragraphs.length === 0 || (line.x0 > bodyLeft + INDENT_THRESH);
+        if (isDropCapLine(line)) { pageDropCap += line.text; return; }
+
+        if (CHAPTER_HEADING_RE.test(line.text)) {
+          paragraphs.push({ text: line.text, page: p, heading: true });
+          lastHeadingParaIdx = paragraphs.length - 1;
+          if (firstParaIdxThisPage === null) firstParaIdxThisPage = paragraphs.length - 1;
+          return;
+        }
+
+        const prevIsHeading = paragraphs.length && paragraphs[paragraphs.length - 1].heading;
+        const isNewPara = paragraphs.length === 0 || prevIsHeading || (line.x0 > bodyLeft + INDENT_THRESH);
         if (isNewPara) {
           paragraphs.push({ text: line.text, page: p });
+          if (firstParaIdxThisPage === null) firstParaIdxThisPage = paragraphs.length - 1;
         } else {
           const last = paragraphs[paragraphs.length - 1];
           if (/-$/.test(last.text) && /^[a-z]/.test(line.text)) last.text = last.text.replace(/-$/, '') + line.text;
           else last.text += ' ' + line.text;
         }
       });
-    }
+
+      if (pageDropCap) {
+        const targetIdx = lastHeadingParaIdx !== null ? lastHeadingParaIdx + 1 : firstParaIdxThisPage;
+        if (targetIdx !== null && paragraphs[targetIdx] && !paragraphs[targetIdx].heading) {
+          paragraphs[targetIdx].text = pageDropCap + paragraphs[targetIdx].text.replace(/^\s+/, '');
+        }
+      }
+    });
+
     return paragraphs;
   }
   function buildParagraphsHtml(paragraphs){
-    return paragraphs.map(p => `<p>${escapeHtml(p.text)}</p>`).join('');
+    return paragraphs.map(p => p.heading
+      ? `<p class="chapter-heading">${escapeHtml(p.text)}</p>`
+      : `<p>${escapeHtml(p.text)}</p>`
+    ).join('');
   }
 
   /* ---------- Opening / rendering a book ---------- */
@@ -737,11 +779,26 @@
     let pageTopOffset = 0;
 
     paragraphs.forEach((p, idx) => {
+      // Every chapter heading starts a fresh page (unless it's already page-start).
+      if (p.heading && idx > pageStart) {
+        pages.push({ start: pageStart, end: idx });
+        pageStart = idx;
+      }
+
       const pEl = document.createElement('p');
       pEl.textContent = p.text;
-      pEl.style.margin = '0 0 0.9em 0';
-      pEl.style.textIndent = idx === pageStart ? '0' : '1.3em';
+      if (p.heading) {
+        pEl.style.textAlign = 'center';
+        pEl.style.fontWeight = '700';
+        pEl.style.margin = '0 0 1.4em 0';
+      } else {
+        pEl.style.margin = '0 0 0.9em 0';
+        pEl.style.textIndent = idx === pageStart ? '0' : '1.3em';
+      }
       measurer.appendChild(pEl);
+
+      if (idx === pageStart) pageTopOffset = pEl.offsetTop;
+
       const bottom = (pEl.offsetTop + pEl.offsetHeight) - pageTopOffset;
       if (bottom > pageHeight && idx > pageStart) {
         pages.push({ start: pageStart, end: idx });
